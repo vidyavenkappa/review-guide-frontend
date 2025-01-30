@@ -177,7 +177,6 @@ This project is **open-source** under the **MIT License**.
 ---
 
 ## 🎉 **Now Your AI Research Evaluator is Fully Deployed! 🚀**
-Let me know if you need **additional features or improvements!** 😊
-=======
+
 
 
