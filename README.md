@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 # **📚 AI Research Paper Evaluator**
 An **AI-powered application** that analyzes research papers and provides **structured evaluations** using **Google Gemini AI**.  
 
@@ -249,4 +249,4 @@ This section has moved here: [https://facebook.github.io/create-react-app/docs/d
 ### `npm run build` fails to minify
 
 This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
->>>>>>> 4a0311d (Initial commit - Uploaded React frontend)
+
