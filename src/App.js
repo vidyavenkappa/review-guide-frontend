@@ -104,7 +104,7 @@ function App() {
   return (
     <Container maxWidth="md" sx={{ backgroundColor: "#f4f4f4", padding: "20px", borderRadius: "10px", height: "90vh", display: "flex", flexDirection: "column", gap: 2 }}>
       <Typography variant="h4" align="center" gutterBottom sx={{ color: "#333", fontWeight: "bold" }}>
-        📚 AI Research Paper Evaluator
+        📚 Review Guide: AI Research Paper Evaluator
       </Typography>
 
       <Stepper activeStep={activeStep} alternativeLabel>
@@ -112,6 +112,29 @@ function App() {
         <Step><StepLabel>Upload File</StepLabel></Step>
         <Step><StepLabel>View Evaluation</StepLabel></Step>
       </Stepper>
+
+      <Snackbar 
+        open={error.show} 
+        autoHideDuration={6000} 
+        onClose={handleCloseError}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert 
+          onClose={handleCloseError} 
+          severity={error.severity} 
+          variant="filled"
+          sx={{ width: "100%" }}
+        >
+          <Typography variant="body2">
+            {error.message}
+            {error.severity === "error" && (
+              <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                Need help? Check the instructions above for troubleshooting steps.
+              </Typography>
+            )}
+          </Typography>
+        </Alert>
+      </Snackbar>
 
       {activeStep === 0 && (
         <TextField
@@ -150,8 +173,11 @@ function App() {
       )}
 
       <Box display="flex" justifyContent="space-between">
-        {activeStep !== 0 && <Button variant="contained" disabled={activeStep === 0} onClick={() => setActiveStep((prev) => prev - 1)}>
+        {activeStep ===1  && <Button variant="contained" disabled={activeStep === 0} onClick={() => setActiveStep((prev) => prev - 1)}>
           Back
+        </Button>}
+        {activeStep === 2  && <Button variant="contained" disabled={activeStep === 0} onClick={() => {setActiveStep(1);setMessages([])}}>
+          Test a different paper
         </Button>}
         {activeStep !== 2 &&<Button variant="contained" disabled={loading || activeStep === 2 || (activeStep === 1 && !fileUploaded)} onClick={() => setActiveStep((prev) => prev + 1)}>
           Next Step
@@ -163,28 +189,7 @@ function App() {
         </div>
       )}
 
-      <Snackbar 
-        open={error.show} 
-        autoHideDuration={6000} 
-        onClose={handleCloseError}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-      >
-        <Alert 
-          onClose={handleCloseError} 
-          severity={error.severity} 
-          variant="filled"
-          sx={{ width: "100%" }}
-        >
-          <Typography variant="body2">
-            {error.message}
-            {error.severity === "error" && (
-              <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-                Need help? Check the instructions above for troubleshooting steps.
-              </Typography>
-            )}
-          </Typography>
-        </Alert>
-      </Snackbar>
+     
     </Container>
   );
 }
