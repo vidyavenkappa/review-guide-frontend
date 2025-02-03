@@ -157,6 +157,34 @@ function App() {
           Next Step
         </Button>}
       </Box>
+      {loading && (
+        <div style={{ textAlign: "center" }}>
+          <CircularProgress size={30} />
+        </div>
+      )}
+
+      <Snackbar 
+        open={error.show} 
+        autoHideDuration={6000} 
+        onClose={handleCloseError}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert 
+          onClose={handleCloseError} 
+          severity={error.severity} 
+          variant="filled"
+          sx={{ width: "100%" }}
+        >
+          <Typography variant="body2">
+            {error.message}
+            {error.severity === "error" && (
+              <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                Need help? Check the instructions above for troubleshooting steps.
+              </Typography>
+            )}
+          </Typography>
+        </Alert>
+      </Snackbar>
     </Container>
   );
 }
