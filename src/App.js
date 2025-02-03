@@ -86,7 +86,7 @@ function App() {
 
       const result = await axios.post(`${API_BASE_URL}/upload/`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
-        timeout: 30000,
+        timeout: 30000*60,
       });
 
       setMessages((prev) => [...prev, { type: "bot", content: `📄 **Evaluation for:** **${fileTitle}**\n\n${result.data.evaluation}` }]);
