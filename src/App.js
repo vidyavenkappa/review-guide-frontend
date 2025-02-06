@@ -1,337 +1,254 @@
-import { useState, useEffect, useRef } from "react";
-import axios from "axios";
-import ReactMarkdown from "react-markdown";
-import {
-  Container,
-  Typography,
-  CircularProgress,
-  Card,
-  CardContent,
-  Paper,
-  Button,
-  TextField,
-  Snackbar,
-  Alert,
-  Box,
-  Stepper,
-  Step,
-  StepLabel,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-} from "@mui/material";
-import { UploadFile as UploadIcon } from "@mui/icons-material";
-import { motion } from "framer-motion";
+import React, { useState,  } from 'react';
+import ReactMarkdown from 'react-markdown';
+import axios from 'axios';
+import { Box, Container, Paper, Typography, Stepper, Step, StepLabel, TextField, Button, Stack, MenuItem, Select, ThemeProvider, createTheme, CircularProgress, Alert } from '@mui/material';
+import KeyIcon from '@mui/icons-material/Key';
+import EditNoteIcon from '@mui/icons-material/EditNote';
+import UploadIcon from '@mui/icons-material/Upload';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+
+
 
 const API_BASE_URL = "https://fastapi-research-evaluator.onrender.com";
-//const API_BASE_URL="http://127.0.0.1:8000"
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
-const ALLOWED_FILE_TYPES = [
-  "application/pdf",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "text/plain",
+
+const theme = createTheme({
+  palette: {
+    primary: {
+      main: '#4B7BF5',
+    },
+    background: {
+      default: '#F5F7FF',
+    },
+  },
+  typography: {
+    h4: { fontWeight: 700, letterSpacing: '-0.01em' },
+    subtitle1: { fontSize: '1.1rem' },
+  },
+});
+
+
+
+
+const steps = [
+  { label: 'API Key', icon: <KeyIcon /> },
+  { label: 'Details', icon: <EditNoteIcon /> },
+  { label: 'Upload', icon: <UploadIcon /> },
+  { label: 'Results', icon: <CheckCircleIcon /> },
 ];
 
-function App() {
-  const [messages, setMessages] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [geminiKey, setGeminiKey] = useState("");
-  const [prompt, setPrompt] = useState("");
-  const [conference, setConference] = useState("NeurIPS");
-  const [fileUploaded, setFileUploaded] = useState(false);
-  const [error, setError] = useState({
-    show: false,
-    message: "",
-    severity: "error",
-  });
+const App = () => {
   const [activeStep, setActiveStep] = useState(0);
-  const chatEndRef = useRef(null);
+  const [apiKey, setApiKey] = useState('');
+  const [evaluationPrompt, setEvaluationPrompt] = useState('');
+  const [targetConference, setTargetConference] = useState('');
+  const [uploadedFile, setUploadedFile] = useState(null);
+  const [evaluationResult, setEvaluationResult] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  const handleNext = () => setActiveStep((prev) => Math.min(prev + 1, steps.length - 1));
+  const handleBack = () => setActiveStep((prev) => Math.max(prev - 1, 0));
 
-  const showError = (message, severity = "error") => {
-    setError({ show: true, message, severity });
-  };
-
-  const handleCloseError = () => {
-    setError({ ...error, show: false });
-  };
-
-  const validateFile = (file) => {
-    if (!file) throw new Error("Please select a file to upload.");
-    if (file.size > MAX_FILE_SIZE)
-      throw new Error("File size exceeds 10MB limit.");
-    if (!ALLOWED_FILE_TYPES.includes(file.type))
-      throw new Error("Invalid file type.");
-    return true;
-  };
-
-  const validateGeminiKey = () => {
-    if (!geminiKey.trim())
-      throw new Error("Please enter your Gemini API Key.");
-    if (geminiKey.length < 30)
-      throw new Error("Invalid Gemini API Key format.");
-    return true;
-  };
-
-  const validatePrompt = () => {
-    if (!prompt.trim()) throw new Error("Please enter your prompt.");
-    return true;
-  };
-
-  const handleFileChange = async (event) => {
+  const handleFileUpload = async (event) => {
     try {
       const file = event.target.files[0];
-      setFileUploaded(!!file);
-      validateFile(file);
-      validateGeminiKey();
-      validatePrompt();
+      if (!file) return;
 
+      setUploadedFile(file);
       setLoading(true);
-      const fileTitle = file.name.replace(/\.[^/.]+$/, "");
-      setMessages((prev) => [
-        ...prev,
-        {
-          type: "user",
-          content: `📄 Uploading: **${fileTitle}** with prompt for **${conference}**`,
-        },
-      ]);
+      setError('');
+      setSuccess('');
 
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("gemini_key", geminiKey);
-      formData.append("prompt", prompt);
-      formData.append("conference", conference);
+      formData.append("gemini_key", apiKey);
+      formData.append("prompt", evaluationPrompt);
+      formData.append("conference", targetConference);
 
-      const result = await axios.post(`${API_BASE_URL}/upload/`, formData, {
+      const response = await axios.post(`${API_BASE_URL}/upload/`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
-        timeout: 30000 * 60,
+        timeout: 1800000,
       });
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          type: "bot",
-          content: `📄 **Evaluation for:** **${fileTitle}**\n\n${result.data.evaluation}`,
-        },
-      ]);
-      showError("File processed successfully!", "success");
-      setActiveStep(2);
+      setEvaluationResult(response.data.evaluation);
+      setSuccess("File processed successfully!");
+      setActiveStep(3);
     } catch (error) {
-      showError(
-        error.response?.data?.error ||
-          error.message ||
-          "An error occurred while processing the file."
-      );
-      setFileUploaded(false);
+      setError("An error occurred while processing the file. Please try again.");
+      console.error("Error processing the file:", error);
     } finally {
       setLoading(false);
       event.target.value = "";
     }
   };
 
+  const copyResponse = async () => {
+    // const markdownElement = document.getElementById("markdown-content");
+    // console.log(markdownElement)
+    // if (!markdownElement) return;
+  
+    const textToCopy = evaluationResult; // Extract text content
+    console.log(textToCopy)
+    navigator.clipboard.writeText(textToCopy)
+      .then(() => {
+        setSuccess("Markdown content copied to clipboard!");
+      })
+      .catch((err) => {
+        setError("Failed to copy text: ", err);
+      });
+  };
+
   return (
-    <Container
-      maxWidth="md"
-      sx={{
-        backgroundColor: "#f4f4f4",
-        padding: "20px",
-        borderRadius: "10px",
-        height: "90vh",
-        display: "flex",
-        flexDirection: "column",
-        gap: 2,
-      }}
-    >
-      <Typography
-        variant="h4"
-        align="center"
-        gutterBottom
-        sx={{ color: "#333", fontWeight: "bold" }}
-      >
-        📚 Review Guide: AI Research Paper Evaluator
-      </Typography>
-
-      <Stepper activeStep={activeStep} alternativeLabel>
-        <Step>
-          <StepLabel>Enter API Key</StepLabel>
-        </Step>
-        <Step>
-          <StepLabel>
-            Enter Prompt, Select Conference & Upload File
-          </StepLabel>
-        </Step>
-        <Step>
-          <StepLabel>View Evaluation</StepLabel>
-        </Step>
-      </Stepper>
-
-      <Snackbar
-        open={error.show}
-        autoHideDuration={6000}
-        onClose={handleCloseError}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-      >
-        <Alert
-          onClose={handleCloseError}
-          severity={error.severity}
-          variant="filled"
-          sx={{ width: "100%" }}
-        >
-          <Typography variant="body2">
-            {error.message}
-            {error.severity === "error" && (
-              <Typography
-                variant="caption"
-                display="block"
-                sx={{ mt: 1 }}
-              >
-                Need help? Check the instructions above for troubleshooting steps.
+    <ThemeProvider theme={theme}>
+      {/* <Box sx={{ bgcolor: 'background.default', minHeight: '100vh', py: 8 }}> */}
+      <Box sx={{ 
+        backgroundImage: `${process.env.PUBLIC_URL}/background.jpg`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        minHeight: '100vh',
+        py: 8,
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+      }}>
+        <Container maxWidth="md">
+          <Paper elevation={3} sx={{ p: 6, borderRadius: 3 }}>
+            <Stack spacing={5}>
+              <Typography variant="h4" textAlign="center">
+                AI Research Paper Evaluator
               </Typography>
-            )}
-          </Typography>
-        </Alert>
-      </Snackbar>
+              <Stepper activeStep={activeStep} alternativeLabel>
+                {steps.map((step, index) => (
+                  <Step key={step.label}>
+                    <StepLabel>{step.label}</StepLabel>
+                  </Step>
+                ))}
+              </Stepper>
 
-      {activeStep === 0 && (
-        <TextField
-          type="password"
-          label="Enter Gemini API Key"
-          variant="outlined"
-          fullWidth
-          value={geminiKey}
-          onChange={(e) => setGeminiKey(e.target.value)}
-        />
-      )}
+              {loading && <CircularProgress sx={{ alignSelf: 'center' }} />}
+              {/* {error && <Alert severity="error">{error}</Alert>}
+              {success && <Alert severity="success">{success}</Alert>} */}
+              {error && (
+                <Alert 
+                  severity="error" 
+                  onClose={() => setError('')} // Clears the error state
+                >
+                  {error}
+                </Alert>
+              )}
 
-      {activeStep === 1 && (
-        <Box display="flex" flexDirection="column" gap={2}>
-          <TextField
-            label="Enter prompt (Markdown supported)"
-            variant="outlined"
-            fullWidth
-            multiline
-            minRows={4}
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-          />
-          <FormControl fullWidth>
-            <InputLabel id="conference-select-label">
-              Select Conference
-            </InputLabel>
-            <Select
-              labelId="conference-select-label"
-              id="conference-select"
-              value={conference}
-              label="Select Conference"
-              onChange={(e) => setConference(e.target.value)}
-            >
-              <MenuItem value="NeurIPS">NeurIPS</MenuItem>
-              <MenuItem value="ICLR">ICLR</MenuItem>
-              <MenuItem value="ICML">ICML</MenuItem>
-              <MenuItem value="CoNLL">CoNLL</MenuItem>
-              <MenuItem value="ACL">ACL</MenuItem>
-            </Select>
-          </FormControl>
-          <input
-            type="file"
-            onChange={handleFileChange}
-            style={{ display: "none" }}
-            id="file-input"
-            accept=".pdf,.doc,.docx,.txt"
-          />
-          <label htmlFor="file-input">
-            <Button
-              variant="contained"
-              color="primary"
-              component="span"
-              startIcon={<UploadIcon />}
-              disabled={loading}
-            >
-              {loading ? "Processing..." : "Upload & Evaluate"}
-            </Button>
-          </label>
-        </Box>
-      )}
+              {success && (
+                <Alert 
+                  severity="success" 
+                  onClose={() => setSuccess('')} // Clears the success state
+                >
+                  {success}
+                </Alert>
+              )}
 
-      {activeStep === 2 && (
-        <Paper
-          elevation={3}
-          sx={{
-            flexGrow: 1,
-            overflowY: "auto",
-            padding: "15px",
-            borderRadius: "10px",
-            backgroundColor: "#fff",
-          }}
-        >
-          {messages.map((msg, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
-              <Card sx={{ marginBottom: 1 }}>
-                <CardContent>
-                  {msg.type === "bot" ? (
-                    <ReactMarkdown>{msg.content}</ReactMarkdown>
-                  ) : (
-                    <Typography>{msg.content}</Typography>
-                  )}
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
-          <div ref={chatEndRef} />
-        </Paper>
-      )}
+              <Box sx={{ mt: 4 }} id="evaluation-section">
+                {activeStep === 0 && (
+                  <Stack spacing={3}>
+                    <Typography variant="h6">Enter API Key</Typography>
+                    <TextField
+                      fullWidth
+                      variant="outlined"
+                      type="password"
+                      placeholder="Enter your Gemini API key"
+                      value={apiKey}
+                      onChange={(e) => setApiKey(e.target.value)}
+                    />
+                  </Stack>
+                )}
+                {activeStep === 1 && (
+                  <Stack spacing={3}>
+                    <Typography variant="h6">Enter Evaluation Details </Typography>
+                    <Select
+                      fullWidth
+                      displayEmpty
+                      value={targetConference}
+                      onChange={(e) => setTargetConference(e.target.value)}
+                    >
+                      <MenuItem value="" disabled>Select a conference</MenuItem>
+                      <MenuItem value="ACL">ACL</MenuItem>
+                      <MenuItem value="NeurIPS">NeurIPS</MenuItem>
+                      <MenuItem value="ICLR">ICLR</MenuItem>
+                      <MenuItem value="CVPR">CVPR</MenuItem>
+                      <MenuItem value="ICML">ICML</MenuItem>
+                    </Select>
 
-      <Box display="flex" justifyContent="space-between">
-        {activeStep === 1 && (
-          <Button
-            variant="contained"
-            disabled={activeStep === 0}
-            onClick={() => setActiveStep((prev) => prev - 1)}
-          >
-            Back
-          </Button>
-        )}
-        {activeStep === 2 && (
-          <Button
-            variant="contained"
-            onClick={() => {
-              setActiveStep(1);
-              setMessages([]);
-            }}
-          >
-            Test a different paper
-          </Button>
-        )}
-        {activeStep !== 2 && (
-          <Button
-            variant="contained"
-            disabled={
-              loading ||
-              activeStep === 2 ||
-              (activeStep === 1 && !fileUploaded && !prompt.trim())
-            }
-            onClick={() => setActiveStep((prev) => prev + 1)}
-          >
-            Next Step
-          </Button>
-        )}
+                    <TextField
+                      fullWidth
+                      variant="outlined"
+                      placeholder="Enter additional evaluation prompt"
+                      value={evaluationPrompt}
+                      onChange={(e) => setEvaluationPrompt(e.target.value)}
+                      multiline
+                      rows={4}
+                    />
+                    
+                  </Stack>
+                )}
+                {activeStep === 2 && (
+                  <Stack spacing={3} alignItems="center">
+                    <Typography variant="h6">Upload Research Paper</Typography>
+                    <Button variant="contained" component="label">
+                      Upload File
+                      <input hidden type="file" accept=".pdf" onChange={handleFileUpload} />
+                    </Button>
+                    {uploadedFile && <Typography>{uploadedFile.name} ({(uploadedFile.size / 1024 / 1024).toFixed(2)} MB)</Typography>}
+                  </Stack>
+                )}
+                {activeStep === 3 && (
+                  <Stack spacing={3} textAlign="center">
+                    <Typography variant="h6">Evaluation Results</Typography>
+                    {/* <Paper elevation={2} sx={{ p: 2, bgcolor: 'white' }}>
+                      <ReactMarkdown style={{textAlign: 'justify'}}>{evaluationResult}</ReactMarkdown>
+                    </Paper> */}
+                    <Paper 
+                      elevation={2} 
+                      sx={{ 
+                        p: 2, 
+                        bgcolor: 'white', 
+                        maxHeight: '50vh', // Makes it fit within the screen
+                        overflowY: 'auto', // Enables scrolling
+                        width: '100%', 
+                      }}
+                    >
+                      {/* <ReactMarkdown style={{ textAlign: 'left' }} id="markdown-content">
+                        {evaluationResult}
+                      </ReactMarkdown> */}
+                      <ReactMarkdown 
+                        components={{ 
+                          p: ({node, ...props}) => <p style={{ textAlign: 'left' }} {...props} /> 
+                        }}
+                      >{evaluationResult}</ReactMarkdown>
+                    </Paper>
+
+                    <Button variant="contained" onClick={()=>{copyResponse()}}>Copy Response</Button>
+                  </Stack>
+                )}
+              </Box>
+              <Box display="flex" justifyContent="space-between" sx={{ mt: 4 }}>
+                <Button onClick={handleBack} variant="outlined" style={{ visibility: activeStep === 0 ? 'hidden' : 'visible' }}>
+                  Previous
+                </Button>
+                <Button variant="contained" onClick={handleNext} disabled={  
+                  (activeStep === 2 && evaluationResult=='') || 
+                  (activeStep === 0 && apiKey=='') ||
+                  (activeStep == 1 && targetConference == '')}>
+                  {activeStep === steps.length - 1 ? 'Finish' : 'Next'}
+                </Button>
+              </Box>
+            </Stack>
+          </Paper>
+        </Container>
       </Box>
-      {loading && (
-        <Box textAlign="center">
-          <CircularProgress size={30} />
-        </Box>
-      )}
-    </Container>
+    </ThemeProvider>
   );
-}
+};
 
 export default App;
+
