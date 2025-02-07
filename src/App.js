@@ -1,4 +1,5 @@
 import React, { useState,  } from 'react';
+import { BrowserRouter as Router, Route, Routes, useNavigate, useLocation } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import axios from 'axios';
 import { Box, Container, Paper, Typography, Stepper, Step, StepLabel, TextField, Button, Stack, MenuItem, Select, ThemeProvider, createTheme, CircularProgress, Alert } from '@mui/material';
@@ -10,6 +11,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 
 
 const API_BASE_URL = "https://fastapi-research-evaluator.onrender.com";
+//const API_BASE_URL = "http://127.0.0.1:8000"
 
 const theme = createTheme({
   palette: {
@@ -37,6 +39,18 @@ const steps = [
 ];
 
 const App = () => {
+  return (
+    <Router>
+      <ThemeProvider theme={theme}>
+        <Routes>
+          <Route path="/" element={<EvaluationPage />} />
+          <Route path="/compare" element={<ComparisonPage />} />
+        </Routes>
+      </ThemeProvider>
+    </Router>
+  );
+};
+const EvaluationPage = () => {
   const [activeStep, setActiveStep] = useState(0);
   const [apiKey, setApiKey] = useState('');
   const [evaluationPrompt, setEvaluationPrompt] = useState('');
@@ -46,9 +60,16 @@ const App = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-
-  const handleNext = () => setActiveStep((prev) => Math.min(prev + 1, steps.length - 1));
+  const navigate = useNavigate();
+  // const handleNext = () => setActiveStep((prev) => Math.min(prev + 1, steps.length - 1));
   const handleBack = () => setActiveStep((prev) => Math.max(prev - 1, 0));
+  const handleNext = () => {
+    if (activeStep === steps.length - 1) {
+      navigate('/compare', { state: { evaluationResult ,apiKey} });
+    } else {
+      setActiveStep((prev) => Math.min(prev + 1, steps.length - 1));
+    }
+  };
 
   const handleFileUpload = async (event) => {
     try {
@@ -249,6 +270,80 @@ const App = () => {
     </ThemeProvider>
   );
 };
+
+
+
+const ComparisonPage = () => {
+  const location = useLocation(); // Get location object
+  const navigate = useNavigate();
+  const [humanReview, setHumanReview] = useState('');
+  const [comparisonResult, setComparisonResult] = useState('');
+  const evaluationResult = location.state?.evaluationResult || ''; // Safely access evaluationResult
+  const apiKey = location.state?.apiKey || '';
+
+  const compare_reviews = async (apiKey, humanReview, evaluationResult) => {
+    try {
+      const response = await axios.post(API_BASE_URL +"/compare/", 
+        new URLSearchParams({
+          gemini_key: apiKey,
+          gemini_review: evaluationResult,
+          human_review: humanReview
+        }),
+        {
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        }
+      );
+      setComparisonResult(response.data.comparison);
+    } catch (error) {
+      console.error("Error comparing reviews:", error.response?.data || error.message);
+      return "An error occurred while comparing the reviews.";
+    }
+  };
+  
+  return (
+    <Container maxWidth="md">
+      <Paper elevation={3} sx={{ p: 6, borderRadius: 3 }}>
+        <Stack spacing={5}>
+          <Typography variant="h4" textAlign="center">Compare AI and Human Review</Typography>
+          <TextField
+            fullWidth
+            variant="outlined"
+            placeholder="Paste human review here"
+            value={humanReview}
+            onChange={(e) => setHumanReview(e.target.value)}
+            multiline
+            rows={4}
+          />
+          <Typography variant="h6">AI Evaluation</Typography>
+          <Paper elevation={2} sx={{ p: 2, bgcolor: 'white', maxHeight: '50vh', overflowY: 'auto' }}>
+            <ReactMarkdown>{evaluationResult}</ReactMarkdown>
+          </Paper>
+          {comparisonResult && (
+            <Paper elevation={2} sx={{ p: 2, bgcolor: 'white', maxHeight: '50vh', overflowY: 'auto' }}>
+              <Typography variant="h6">Comparison Result</Typography>
+              {/* <ReactMarkdown>{comparisonResult}</ReactMarkdown> */}
+              <ReactMarkdown 
+                components={{ 
+                  p: ({node, ...props}) => <p style={{ textAlign: 'left' }} {...props} /> 
+                }}
+              >
+                {comparisonResult}
+              </ReactMarkdown>
+            </Paper>
+          )}
+          <Box display="flex" justifyContent="space-between" sx={{ mt: 4 }}>
+            <Button variant="outlined" onClick={() => navigate('/')}>Home</Button>
+            <Button variant="contained" onClick={() => compare_reviews(apiKey,humanReview,evaluationResult)}>Compare Evaluations</Button> 
+          </Box>
+          
+        </Stack>
+        
+      </Paper>
+
+    </Container>
+  );
+};
+
 
 export default App;
 
