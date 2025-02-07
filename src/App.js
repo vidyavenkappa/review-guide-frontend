@@ -280,8 +280,12 @@ const ComparisonPage = () => {
   const [comparisonResult, setComparisonResult] = useState('');
   const evaluationResult = location.state?.evaluationResult || ''; // Safely access evaluationResult
   const apiKey = location.state?.apiKey || '';
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   const compare_reviews = async (apiKey, humanReview, evaluationResult) => {
+    setLoading(true)
     try {
       const response = await axios.post(API_BASE_URL +"/compare/", 
         new URLSearchParams({
@@ -294,9 +298,13 @@ const ComparisonPage = () => {
         }
       );
       setComparisonResult(response.data.comparison);
+      
+      setLoading(false)
+      setSuccess("Successfully completed the comparison!!")
     } catch (error) {
       console.error("Error comparing reviews:", error.response?.data || error.message);
-      return "An error occurred while comparing the reviews.";
+      setError("An error occurred while comparing the reviews.");
+      setLoading(false)
     }
   };
   
@@ -318,6 +326,26 @@ const ComparisonPage = () => {
           <Paper elevation={2} sx={{ p: 2, bgcolor: 'white', maxHeight: '50vh', overflowY: 'auto' }}>
             <ReactMarkdown>{evaluationResult}</ReactMarkdown>
           </Paper>
+
+          {loading && <CircularProgress sx={{ alignSelf: 'center' }} />}
+          {success && (
+                <Alert 
+                  severity="success" 
+                  onClose={() => setSuccess('')} // Clears the success state
+                >
+                  {success}
+                </Alert>
+              )}
+          {error && (
+                <Alert 
+                  severity="error" 
+                  onClose={() => setError('')} // Clears the error state
+                >
+                  {error}
+                </Alert>
+              )}
+
+
           {comparisonResult && (
             <Paper elevation={2} sx={{ p: 2, bgcolor: 'white', maxHeight: '50vh', overflowY: 'auto' }}>
               <Typography variant="h6">Comparison Result</Typography>
