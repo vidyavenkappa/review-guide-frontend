@@ -196,7 +196,6 @@ const EvaluationPage = () => {
                       <MenuItem value="ACL">ACL</MenuItem>
                       <MenuItem value="NeurIPS">NeurIPS</MenuItem>
                       <MenuItem value="ICLR">ICLR</MenuItem>
-                      <MenuItem value="CVPR">CVPR</MenuItem>
                       <MenuItem value="ICML">ICML</MenuItem>
                     </Select>
 
